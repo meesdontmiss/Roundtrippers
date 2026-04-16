@@ -1,26 +1,114 @@
 @import "tailwindcss";
 
 :root {
+  /* Clean medical/clinical palette */
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #1a2332;
+  --muted: #f0f4f8;
+  --muted-foreground: #5a6a7a;
+  --card: #ffffff;
+  --card-foreground: #1a2332;
+  --border: #dce3eb;
+  --primary: #1b6ec2;
+  --primary-foreground: #ffffff;
+  --primary-light: #e8f1fb;
+  --destructive: #c0392b;
+  --accent: #f5f8fb;
+  --ring: #1b6ec2;
+  --pain-red: #c0392b;
+  --pain-red-light: #fdf0ef;
+  --teal: #0d8a72;
+  --teal-light: #e6f7f3;
+  --warm-gray: #f7f5f2;
+  --clinical-blue: #2980b9;
+  --clinical-blue-dark: #14456b;
+  --section-alt: #f8fafb;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-light: var(--primary-light);
+  --color-destructive: var(--destructive);
+  --color-accent: var(--accent);
+  --color-ring: var(--ring);
+  --color-pain-red: var(--pain-red);
+  --color-pain-red-light: var(--pain-red-light);
+  --color-teal: var(--teal);
+  --color-teal-light: var(--teal-light);
+  --color-warm-gray: var(--warm-gray);
+  --color-clinical-blue: var(--clinical-blue);
+  --color-clinical-blue-dark: var(--clinical-blue-dark);
+  --color-section-alt: var(--section-alt);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Wallet adapter overrides — clinical style */
+.wallet-adapter-button {
+  background-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+  font-weight: 600 !important;
+  border-radius: 6px !important;
+  font-size: 14px !important;
+}
+.wallet-adapter-modal-wrapper {
+  background-color: var(--card) !important;
+  border: 1px solid var(--border) !important;
+}
+
+/* Clean scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--muted);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* Subtle pulse for loading states */
+@keyframes gentlePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.animate-gentle-pulse {
+  animation: gentlePulse 2s ease-in-out infinite;
+}
+
+/* Medical badge border animation */
+@keyframes certGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(27, 110, 194, 0.1); }
+  50% { box-shadow: 0 0 0 8px rgba(27, 110, 194, 0.05); }
+}
+.animate-cert-glow {
+  animation: certGlow 3s ease-in-out infinite;
+}
+
+/* ISI (Important Safety Information) pharma-style bar */
+.isi-bar {
+  background: var(--warm-gray);
+  border-top: 2px solid var(--border);
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--muted-foreground);
 }
