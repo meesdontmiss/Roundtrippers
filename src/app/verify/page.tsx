@@ -3,38 +3,68 @@
 import { useState, useCallback } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import { PublicKey } from "@solana/web3.js";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PainBadge from "@/components/PainBadge";
 import { analyzeWallet, type WalletAnalysis } from "@/lib/wallet-analyzer";
 import { getTierForLoss } from "@/lib/tiers";
 import { formatUSD } from "@/lib/utils";
-import { Loader2, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, AlertTriangle, CheckCircle, XCircle, Search, Wallet } from "lucide-react";
 
 type VerifyState = "idle" | "scanning" | "qualified" | "not-qualified" | "error";
+type InputMode = "connect" | "manual";
 
 export default function VerifyPage() {
   const { publicKey, connected } = useWallet();
   const [state, setState] = useState<VerifyState>("idle");
   const [analysis, setAnalysis] = useState<WalletAnalysis | null>(null);
   const [error, setError] = useState<string>("");
+  const [mode, setMode] = useState<InputMode>("manual");
+  const [manualAddress, setManualAddress] = useState<string>("");
+  const [addressError, setAddressError] = useState<string>("");
+
+  const resolveAddress = useCallback((): string | null => {
+    if (mode === "connect") {
+      return publicKey?.toBase58() || null;
+    }
+    const trimmed = manualAddress.trim();
+    if (!trimmed) {
+      setAddressError("Please enter a Solana wallet address.");
+      return null;
+    }
+    try {
+      new PublicKey(trimmed);
+      setAddressError("");
+      return trimmed;
+    } catch {
+      setAddressError("Invalid Solana address. Check and try again.");
+      return null;
+    }
+  }, [mode, publicKey, manualAddress]);
 
   const handleVerify = useCallback(async () => {
-    if (!publicKey) return;
+    const address = resolveAddress();
+    if (!address) return;
 
     setState("scanning");
     setError("");
     setAnalysis(null);
 
     try {
-      const result = await analyzeWallet(publicKey.toBase58());
+      const result = await analyzeWallet(address);
       setAnalysis(result);
       setState(result.qualified ? "qualified" : "not-qualified");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Analysis failed");
       setState("error");
     }
-  }, [publicKey]);
+  }, [resolveAddress]);
+
+  const canScan =
+    mode === "connect"
+      ? connected && state !== "scanning"
+      : manualAddress.trim().length > 0 && state !== "scanning";
 
   const tier = analysis ? getTierForLoss(analysis.summary.painScore) : null;
 
@@ -53,31 +83,84 @@ export default function VerifyPage() {
               CRS Diagnostic Assessment
             </h1>
             <p className="text-muted-foreground">
-              Connect your wallet. Our diagnostic system will assess your on-chain history.
+              Scan any Solana wallet to assess on-chain roundtrip history. No connection required.
             </p>
           </div>
 
-          {/* Step 1: Connect Wallet */}
+          {/* Step 1: Choose Input Method */}
           <div className="mb-8 p-6 rounded-xl border border-border bg-card">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-bold">
                 1
               </div>
-              <h2 className="text-lg font-bold">Connect Your Wallet</h2>
+              <h2 className="text-lg font-bold">Identify the Patient</h2>
             </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              We support Phantom, Solflare, and other Solana wallets. Your
-              wallet data is read-only — we never request transaction signing
-              authority.
-            </p>
-            <div className="flex items-center gap-4">
-              <WalletMultiButton />
-              {connected && (
-                <span className="text-sm text-teal flex items-center gap-1">
-                  <CheckCircle size={16} /> Connected
-                </span>
-              )}
+
+            {/* Mode Tabs */}
+            <div className="flex gap-2 mb-5">
+              <button
+                onClick={() => { setMode("manual"); setAddressError(""); }}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                  mode === "manual"
+                    ? "bg-primary text-white shadow-sm"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                <Search size={15} />
+                Paste Address
+              </button>
+              <button
+                onClick={() => { setMode("connect"); setAddressError(""); }}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                  mode === "connect"
+                    ? "bg-primary text-white shadow-sm"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                <Wallet size={15} />
+                Connect Wallet
+              </button>
             </div>
+
+            {/* Manual Address Input */}
+            {mode === "manual" && (
+              <div>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Enter any Solana wallet address. Read-only scan — no wallet connection needed.
+                </p>
+                <input
+                  type="text"
+                  value={manualAddress}
+                  onChange={(e) => { setManualAddress(e.target.value); setAddressError(""); }}
+                  placeholder="e.g. 7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
+                  className="w-full p-3 rounded-lg bg-muted border border-border text-foreground placeholder:text-muted-foreground text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+                  spellCheck={false}
+                />
+                {addressError && (
+                  <p className="text-xs text-destructive mt-2 flex items-center gap-1">
+                    <AlertTriangle size={12} /> {addressError}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Wallet Connect */}
+            {mode === "connect" && (
+              <div>
+                <p className="text-sm text-muted-foreground mb-3">
+                  We support Phantom, Solflare, and other Solana wallets. Your
+                  wallet data is read-only — we never request transaction signing authority.
+                </p>
+                <div className="flex items-center gap-4">
+                  <WalletMultiButton />
+                  {connected && (
+                    <span className="text-sm text-teal flex items-center gap-1">
+                      <CheckCircle size={16} /> Connected
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Step 2: Begin Scan */}
@@ -85,7 +168,7 @@ export default function VerifyPage() {
             <div className="flex items-center gap-3 mb-4">
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                  connected
+                  canScan
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted text-muted-foreground"
                 }`}
@@ -95,14 +178,14 @@ export default function VerifyPage() {
               <h2 className="text-lg font-bold">Begin Your Assessment</h2>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              Our system will scan your Solana wallet history to estimate your
-              peak portfolio value, current value, and calculate your{" "}
+              Our system will scan the wallet&apos;s Solana history to estimate
+              peak portfolio value, current value, and calculate the{" "}
               <span className="text-pain-red font-semibold">Pain Score™</span>.
             </p>
 
             <button
               onClick={handleVerify}
-              disabled={!connected || state === "scanning"}
+              disabled={!canScan}
               className="px-6 py-3 bg-primary text-white font-semibold rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {state === "scanning" ? (
